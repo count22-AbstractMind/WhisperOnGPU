@@ -16,8 +16,14 @@ jobs:
         submodules: recursive
         fetch-depth: 0
 
-    - name: Instalar C++ ATL via Chocolatey
-      run: choco install visualstudio2022-component-vc-atl -y
+    - name: Instalar C++ ATL no Visual Studio
+      run: |
+        $vsPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
+        $installer = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
+        Write-Host "Instalando componente ATL no Visual Studio..."
+        $proc = Start-Process -FilePath $installer -ArgumentList "modify --installPath `"$vsPath`" --add Microsoft.VisualStudio.Component.VC.ATL --passive --norestart" -Wait -PassThru
+        Write-Host "Instalacao finalizada com codigo: $($proc.ExitCode)"
+      shell: powershell
 
     - name: Configurar Ambiente MSVC
       uses: ilammy/msvc-dev-cmd@v1
