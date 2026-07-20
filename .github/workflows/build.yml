@@ -10,10 +10,16 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Baixar Código
+    - name: Baixar Codigo
       uses: actions/checkout@v4
       with:
         submodules: recursive
+        fetch-depth: 0
+
+    - name: Configurar Ambiente C++ / ATL
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
 
     - name: Configurar MSBuild
       uses: microsoft/setup-msbuild@v2
@@ -22,16 +28,15 @@ jobs:
       uses: nuget/setup-nuget@v2
 
     - name: Restaurar Pacotes
-      run: nuget restore WhisperCpp.sln
+      run: nuget restore Examples\WhisperDesktop\WhisperDesktop.vcxproj
 
-    - name: Compilar Solucao (Release x64)
-      run: msbuild WhisperCpp.sln /p:Configuration=Release /p:Platform="x64"
+    - name: Compilar Apenas o WhisperDesktop
+      run: msbuild Examples\WhisperDesktop\WhisperDesktop.vcxproj /p:Configuration=Release /p:Platform="x64"
 
     - name: Salvar Executavel
       uses: actions/upload-artifact@v4
       with:
         name: WhisperDesktop-Pronto
         path: |
-          x64/Release/**/*
-          **/bin/Release/**/*
           **/x64/Release/**/*
+          **/Release/**/*
