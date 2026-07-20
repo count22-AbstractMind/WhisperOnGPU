@@ -16,11 +16,8 @@ jobs:
         submodules: recursive
         fetch-depth: 0
 
-    - name: Instalar Suporte C++ ATL no Servidor
-      run: |
-        $vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
-        Start-Process "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe" -ArgumentList "modify --installPath `"$vsPath`" --add Microsoft.VisualStudio.Component.VC.ATL --quiet --norestart" -Wait
-      shell: powershell
+    - name: Instalar C++ ATL via Chocolatey
+      run: choco install visualstudio2022-component-vc-atl -y
 
     - name: Configurar Ambiente MSVC
       uses: ilammy/msvc-dev-cmd@v1
