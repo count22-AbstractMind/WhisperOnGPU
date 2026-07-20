@@ -37,11 +37,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PerfSummary", "Tools\PerfSummary\PerfSummary.csproj", "{8AC301F0-FEC9-4F26-83DD-DB32969CD510}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WhisperPS", "WhisperPS\WhisperPS.csproj", "{D6D188BB-237E-43F0-AFE3-8947FFD88FC7}"
-	ProjectSection(ProjectDependencies) = postProject
-		{701DF8C8-E4A5-43EC-9C6B-747BBF4D8E71} = {701DF8C8-E4A5-43EC-9C6B-747BBF4D8E71}
-	EndProjectSection
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CompressTables", "Tools\CompressTables\CompressTables.csproj", "{61CA4055-77F4-47DA-933E-175FEC28C6FA}"
 EndProject
 Global
@@ -90,10 +85,6 @@ Global
 		{8AC301F0-FEC9-4F26-83DD-DB32969CD510}.Debug|x64.Build.0 = Debug|Any CPU
 		{8AC301F0-FEC9-4F26-83DD-DB32969CD510}.Release|x64.ActiveCfg = Release|Any CPU
 		{8AC301F0-FEC9-4F26-83DD-DB32969CD510}.Release|x64.Build.0 = Release|Any CPU
-		{D6D188BB-237E-43F0-AFE3-8947FFD88FC7}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{D6D188BB-237E-43F0-AFE3-8947FFD88FC7}.Debug|x64.Build.0 = Debug|Any CPU
-		{D6D188BB-237E-43F0-AFE3-8947FFD88FC7}.Release|x64.ActiveCfg = Release|Any CPU
-		{D6D188BB-237E-43F0-AFE3-8947FFD88FC7}.Release|x64.Build.0 = Release|Any CPU
 		{61CA4055-77F4-47DA-933E-175FEC28C6FA}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{61CA4055-77F4-47DA-933E-175FEC28C6FA}.Debug|x64.Build.0 = Debug|Any CPU
 		{61CA4055-77F4-47DA-933E-175FEC28C6FA}.Release|x64.ActiveCfg = Release|Any CPU
