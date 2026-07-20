@@ -1,53 +1,17 @@
-name: Compilar WhisperDesktop
+name: Compilar Whisper Customizado
 
 on:
   push:
-    branches: [ "main", "master" ]
-  workflow_dispatch:
+    branches: [ master, main ]
+  workflow_dispatch: # Permite rodar a Action manualmente pelo painel do GitHub
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
-    - name: Baixar Codigo
+    - name: Baixar codigo-fonte
       uses: actions/checkout@v4
-      with:
-        submodules: recursive
-        fetch-depth: 0
-
-    - name: Instalar C++ ATL e Aguardar Conclusao
-      run: |
-        Write-Host "Iniciando instalacao do componente ATL no Visual Studio..."
-        $installer = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
-        $vsPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
-
-        # Inicia o instalador
-        Start-Process -FilePath $installer -ArgumentList "modify --installPath `"$vsPath`" --add Microsoft.VisualStudio.Component.VC.ATL --quiet --norestart" -Wait
-
-        # Aguarda os processos em segundo plano terminarem
-        $timeout = 300
-        $timer = 0
-        While ((Get-Process -Name "vs_installer", "vs_installershell", "setup" -ErrorAction SilentlyContinue) -and ($timer -lt $timeout)) {
-            Start-Sleep -Seconds 3
-            $timer += 3
-            Write-Host "Instalando ATL... ($timer segundos)"
-        }
-
-        # Confirma se a biblioteca realmente esta no disco
-        $atlHeader = Get-ChildItem -Path "$vsPath\VC\Tools\MSVC" -Filter "atlcomcli.h" -Recurse -ErrorAction SilentlyContinue
-        if ($atlHeader) {
-            Write-Host "SUCESSO: ATL instalada em $($atlHeader.FullName)"
-        } else {
-            Write-Error "FALHA: O arquivo atlcomcli.h nao foi encontrado."
-            exit 1
-        }
-      shell: powershell
-
-    - name: Configurar Ambiente MSVC
-      uses: ilammy/msvc-dev-cmd@v1
-      with:
-        arch: x64
 
     - name: Configurar MSBuild
       uses: microsoft/setup-msbuild@v2
@@ -55,16 +19,39 @@ jobs:
     - name: Configurar NuGet
       uses: nuget/setup-nuget@v2
 
-    - name: Restaurar Pacotes
-      run: nuget restore Examples\WhisperDesktop\WhisperDesktop.vcxproj
+    - name: Restaurar pacotes NuGet
+      run: nuget restore WhisperCpp.sln
 
-    - name: Compilar WhisperDesktop
-      run: msbuild Examples\WhisperDesktop\WhisperDesktop.vcxproj /p:Configuration=Release /p:Platform="x64"
+    - name: Restaurar projetos .NET
+      run: dotnet restore WhisperCpp.sln
 
-    - name: Salvar Executavel
+    - name: 1. Compilar os Shaders da Placa de Video
+      shell: cmd
+      run: msbuild ComputeShaders\ComputeShaders.vcxproj /p:Configuration=Release /p:Platform=x64
+
+    - name: 2. Compactar Shaders (Gera o arquivo ausente)
+      shell: cmd
+      run: dotnet run --project Tools\CompressShaders\CompressShaders.csproj --configuration Release
+
+    - name: 3. Compilar Solucao Whisper Completa
+      shell: cmd
+      # O parâmetro /m faz compilar usando múltiplos núcleos, sendo bem mais rápido
+      run: msbuild WhisperCpp.sln /p:Configuration=Release /p:Platform=x64 /v:minimal /m /fl /flp:logfile=errors.log;errorsonly
+
+    - name: Disponibilizar executaveis para Download
+      if: success()
       uses: actions/upload-artifact@v4
       with:
-        name: WhisperDesktop-Pronto
+        name: Whisper-Binaries
         path: |
-          **/x64/Release/**/*
-          **/Release/**/*
+          **/x64/Release/main.exe
+          **/x64/Release/WhisperDesktop.exe
+          **/x64/Release/*.dll
+        
+    - name: Enviar log se falhar
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: log-de-erros
+        path: errors.log
+        if-no-files-found: ignore
