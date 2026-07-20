@@ -16,13 +16,32 @@ jobs:
         submodules: recursive
         fetch-depth: 0
 
-    - name: Instalar C++ ATL no Visual Studio
+    - name: Instalar C++ ATL e Aguardar Conclusao
       run: |
-        $vsPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
+        Write-Host "Iniciando instalacao do componente ATL no Visual Studio..."
         $installer = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
-        Write-Host "Instalando componente ATL no Visual Studio..."
-        $proc = Start-Process -FilePath $installer -ArgumentList "modify --installPath `"$vsPath`" --add Microsoft.VisualStudio.Component.VC.ATL --passive --norestart" -Wait -PassThru
-        Write-Host "Instalacao finalizada com codigo: $($proc.ExitCode)"
+        $vsPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
+
+        # Inicia o instalador
+        Start-Process -FilePath $installer -ArgumentList "modify --installPath `"$vsPath`" --add Microsoft.VisualStudio.Component.VC.ATL --quiet --norestart" -Wait
+
+        # Aguarda os processos em segundo plano terminarem
+        $timeout = 300
+        $timer = 0
+        While ((Get-Process -Name "vs_installer", "vs_installershell", "setup" -ErrorAction SilentlyContinue) -and ($timer -lt $timeout)) {
+            Start-Sleep -Seconds 3
+            $timer += 3
+            Write-Host "Instalando ATL... ($timer segundos)"
+        }
+
+        # Confirma se a biblioteca realmente esta no disco
+        $atlHeader = Get-ChildItem -Path "$vsPath\VC\Tools\MSVC" -Filter "atlcomcli.h" -Recurse -ErrorAction SilentlyContinue
+        if ($atlHeader) {
+            Write-Host "SUCESSO: ATL instalada em $($atlHeader.FullName)"
+        } else {
+            Write-Error "FALHA: O arquivo atlcomcli.h nao foi encontrado."
+            exit 1
+        }
       shell: powershell
 
     - name: Configurar Ambiente MSVC
