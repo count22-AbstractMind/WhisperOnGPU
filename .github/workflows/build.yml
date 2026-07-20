@@ -16,7 +16,13 @@ jobs:
         submodules: recursive
         fetch-depth: 0
 
-    - name: Configurar Ambiente C++ / ATL
+    - name: Instalar Suporte C++ ATL no Servidor
+      run: |
+        $vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+        Start-Process "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe" -ArgumentList "modify --installPath `"$vsPath`" --add Microsoft.VisualStudio.Component.VC.ATL --quiet --norestart" -Wait
+      shell: powershell
+
+    - name: Configurar Ambiente MSVC
       uses: ilammy/msvc-dev-cmd@v1
       with:
         arch: x64
@@ -30,7 +36,7 @@ jobs:
     - name: Restaurar Pacotes
       run: nuget restore Examples\WhisperDesktop\WhisperDesktop.vcxproj
 
-    - name: Compilar Apenas o WhisperDesktop
+    - name: Compilar WhisperDesktop
       run: msbuild Examples\WhisperDesktop\WhisperDesktop.vcxproj /p:Configuration=Release /p:Platform="x64"
 
     - name: Salvar Executavel
