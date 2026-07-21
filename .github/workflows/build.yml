@@ -72,11 +72,9 @@ jobs:
     - name: 5. Compilar Whisper (DLL com GGML)
       run: msbuild Whisper\Whisper.vcxproj /p:Configuration=Release /p:Platform=x64 /v:minimal
 
-    # === CORREÇÃO: Copiar whisperWindows.h para o WhisperDesktop ===
     - name: 6. Copiar whisperWindows.h para o projeto WhisperDesktop
       shell: pwsh
       run: |
-        # Procura o arquivo gerado pelo Whisper
         $source = @(
           "Whisper\whisperWindows.h",
           "Whisper\x64\Release\whisperWindows.h",
@@ -91,10 +89,21 @@ jobs:
         }
 
     - name: 7. Compilar executáveis (main e WhisperDesktop)
+      shell: pwsh
       run: |
+        # Compila o main (CLI)
         msbuild Examples\main\main.vcxproj /p:Configuration=Release /p:Platform=x64 /v:minimal
-        # Compila o WhisperDesktop com inclusão extra do diretório que contém o cabeçalho
-        msbuild Examples\WhisperDesktop\WhisperDesktop.vcxproj /p:Configuration=Release /p:Platform=x64 /p:AdditionalIncludeDirectories="$(ProjectDir)..\..\Whisper\;$(ProjectDir)..\..\Whisper\x64\Release\;%(AdditionalIncludeDirectories)" /v:minimal
+
+        # Obtém o caminho absoluto do workspace
+        $workspace = $env:GITHUB_WORKSPACE
+        $includePaths = "$workspace\Whisper\;$workspace\Whisper\x64\Release\;"
+
+        # Compila o WhisperDesktop com os diretórios de inclusão adicionais
+        msbuild Examples\WhisperDesktop\WhisperDesktop.vcxproj `
+          /p:Configuration=Release `
+          /p:Platform=x64 `
+          /p:AdditionalIncludeDirectories="$includePaths%(AdditionalIncludeDirectories)" `
+          /v:minimal
 
     - name: 8. Listar arquivos gerados
       shell: pwsh
