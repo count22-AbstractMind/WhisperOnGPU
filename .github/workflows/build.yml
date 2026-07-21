@@ -80,17 +80,16 @@ jobs:
         $ns = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
         $ns.AddNamespace("msb", "http://schemas.microsoft.com/developer/msbuild/2003")
 
-        # Caminhos de inclusão relativos (resolvidos pelo MSBuild)
-        $includePaths = "$(SolutionDir)Whisper\;$(SolutionDir)API\;$(SolutionDir)Whisper\x64\Release\;"
+        $workspace = $env:GITHUB_WORKSPACE
+        $includePaths = "$workspace\Whisper\;$workspace\API\;$workspace\Whisper\x64\Release\;"
 
         foreach ($cfg in $xml.Project.ItemDefinitionGroup) {
           $cl = $cfg.ClCompile
           if ($cl) {
-            # Se já existir AdditionalIncludeDirectories, adiciona os novos; senão, cria
             $inc = $cl.AdditionalIncludeDirectories
             if ($inc) {
               $text = $inc.InnerText
-              if (-not $text.Contains("Whisper\")) {
+              if (-not $text.Contains($workspace)) {
                 $inc.InnerText = $includePaths + $text
               }
             } else {
@@ -103,20 +102,12 @@ jobs:
         $xml.Save($proj)
         Write-Host "WhisperDesktop.vcxproj atualizado com includes."
 
-    - name: 7. Copiar whisperWindows.h (caso ainda seja necessário)
-      shell: pwsh
-      run: |
-        $source = "API\whisperWindows.h"
-        if (Test-Path $source) {
-          Copy-Item $source Examples\WhisperDesktop\ -Force
-        }
-
-    - name: 8. Compilar executáveis (main e WhisperDesktop)
+    - name: 7. Compilar executáveis (main e WhisperDesktop)
       run: |
         msbuild Examples\main\main.vcxproj /p:Configuration=Release /p:Platform=x64 /v:minimal
         msbuild Examples\WhisperDesktop\WhisperDesktop.vcxproj /p:Configuration=Release /p:Platform=x64 /v:minimal
 
-    - name: 9. Listar arquivos gerados
+    - name: 8. Listar arquivos gerados
       shell: pwsh
       run: |
         Write-Host "=== DLLs ==="
@@ -125,7 +116,7 @@ jobs:
         Write-Host "=== EXEs ==="
         Get-ChildItem -Recurse -Filter *.exe | ForEach-Object { "$($_.FullName) - Tamanho: $($_.Length) bytes" }
 
-    - name: 10. Disponibilizar binários para download
+    - name: 9. Disponibilizar binários para download
       if: success()
       uses: actions/upload-artifact@v4
       with:
