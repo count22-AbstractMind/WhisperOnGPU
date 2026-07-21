@@ -5,6 +5,7 @@ on: [push, workflow_dispatch]
 jobs:
   build:
     runs-on: windows-2022
+
     steps:
     - uses: actions/checkout@v4
       with:
@@ -19,38 +20,37 @@ jobs:
         nuget restore Whisper.sln
         dotnet restore Whisper.sln
 
-    - name: Compilar shaders
+    - name: 1. Compilar shaders
       run: msbuild ComputeShaders\ComputeShaders.vcxproj /p:Configuration=Release /p:Platform=x64
 
-    - name: Compactar shaders
+    - name: 2. Compactar shaders
       run: dotnet run --project Tools\CompressShaders\CompressShaders.csproj --configuration Release
 
-    - name: Compilar GGML (primeiro)
-      run: msbuild GGML\GGML.vcxproj /p:Configuration=Release /p:Platform=x64 /v:minimal
+    - name: 3. Compilar GGML
+      run: msbuild GGML\GGML.vcxproj /p:Configuration=Release /p:Platform=x64
 
-    - name: Verificar ggml.lib
-      run: dir GGML\x64\Release\ggml.lib
+    - name: 4. Compilar Whisper (DLL)
+      run: msbuild Whisper\Whisper.vcxproj /p:Configuration=Release /p:Platform=x64
 
-    - name: Compilar Whisper (DLL)
-      run: msbuild Whisper\Whisper.vcxproj /p:Configuration=Release /p:Platform=x64 /v:minimal
-
-    - name: Compilar executáveis
+    - name: 5. Compilar executáveis (main e WhisperDesktop)
       run: |
         msbuild Examples\main\main.vcxproj /p:Configuration=Release /p:Platform=x64
         msbuild Examples\WhisperDesktop\WhisperDesktop.vcxproj /p:Configuration=Release /p:Platform=x64
 
-    - name: Listar DLLs geradas
+    - name: 6. Listar arquivos gerados
       run: |
-        echo "=== Whisper.dll ==="
-        dir Whisper\x64\Release\Whisper.dll
-        echo "=== Outras DLLs ==="
-        dir Examples\WhisperDesktop\x64\Release\*.dll
-        dir x64\Release\*.dll
+        echo "=== DLLs ==="
+        dir /s Whisper\x64\Release\Whisper.dll
+        echo "=== Executáveis ==="
+        dir /s Examples\main\x64\Release\main.exe
+        dir /s Examples\WhisperDesktop\x64\Release\WhisperDesktop.exe
+        echo "=== Outras DLLs (dependências) ==="
+        dir /s Examples\WhisperDesktop\x64\Release\*.dll
 
     - name: Upload dos binários
       uses: actions/upload-artifact@v4
       with:
-        name: Whisper-GGML-Binaries
+        name: WhisperDesktopNG-Binaries
         path: |
           Whisper\x64\Release\Whisper.dll
           Examples\main\x64\Release\main.exe
