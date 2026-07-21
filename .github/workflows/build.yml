@@ -10,40 +10,33 @@ jobs:
     runs-on: windows-2022
 
     steps:
-    # 1. Checkout do código com submódulos (essencial para whisper.cpp)
     - name: Baixar código-fonte com submódulos
       uses: actions/checkout@v4
       with:
         submodules: true
         fetch-depth: 0
 
-    # 2. Ferramentas de build
     - name: Configurar MSBuild
       uses: microsoft/setup-msbuild@v2
 
     - name: Configurar NuGet
       uses: nuget/setup-nuget@v2
 
-    # 3. Restaurar pacotes
     - name: Restaurar pacotes NuGet
       run: nuget restore Whisper.sln
 
     - name: Restaurar projetos .NET
       run: dotnet restore Whisper.sln
 
-    # 4. Compilar shaders da GPU (DirectCompute)
     - name: 1. Compilar ComputeShaders
       run: msbuild ComputeShaders\ComputeShaders.vcxproj /p:Configuration=Release /p:Platform=x64
 
-    # 5. Compactar shaders (gerar o recurso para a DLL)
     - name: 2. Compactar Shaders
       run: dotnet run --project Tools\CompressShaders\CompressShaders.csproj --configuration Release
 
-    # 6. Compilar a biblioteca GGML (quantização e CPU)
     - name: 3. Compilar GGML (biblioteca estática)
       run: msbuild GGML\GGML.vcxproj /p:Configuration=Release /p:Platform=x64 /v:minimal
 
-    # 7. CORREÇÃO CRÍTICA: Adicionar suporte a GGML no Whisper.vcxproj
     - name: 4. Configurar Whisper.vcxproj para usar GGML
       shell: pwsh
       run: |
@@ -52,42 +45,44 @@ jobs:
         $ns = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
         $ns.AddNamespace("msb", "http://schemas.microsoft.com/developer/msbuild/2003")
 
-        # Para cada configuração (Debug e Release)
         foreach ($cfg in $xml.Project.ItemDefinitionGroup) {
-          # Adicionar macro WHISPER_USE_GGML ao pré-processador
+          # Pré-processador
           $cl = $cfg.ClCompile
           if ($cl) {
             $defs = $cl.PreprocessorDefinitions
-            if ($defs -and (-not $defs.InnerText.Contains("WHISPER_USE_GGML"))) {
-              $defs.InnerText = "WHISPER_USE_GGML;" + $defs.InnerText
-              Write-Host "Adicionado WHISPER_USE_GGML"
+            if ($defs) {
+              $text = $defs.InnerText
+              if ($text -and (-not $text.Contains("WHISPER_USE_GGML"))) {
+                $defs.InnerText = "WHISPER_USE_GGML;" + $text
+                Write-Host "Adicionado WHISPER_USE_GGML"
+              }
             }
           }
 
-          # Adicionar ggml.lib às dependências do linker
+          # Linker
           $link = $cfg.Link
           if ($link) {
             $deps = $link.AdditionalDependencies
-            if ($deps -and (-not $deps.InnerText.Contains("ggml.lib"))) {
-              $deps.InnerText = "ggml.lib;" + $deps.InnerText
-              Write-Host "Adicionado ggml.lib ao linker"
+            if ($deps) {
+              $text = $deps.InnerText
+              if ($text -and (-not $text.Contains("ggml.lib"))) {
+                $deps.InnerText = "ggml.lib;" + $text
+                Write-Host "Adicionado ggml.lib ao linker"
+              }
             }
           }
         }
         $xml.Save($proj)
         Write-Host "Whisper.vcxproj atualizado com sucesso."
 
-    # 8. Compilar a Whisper.dll (com suporte a GGML)
     - name: 5. Compilar Whisper (DLL com GGML)
       run: msbuild Whisper\Whisper.vcxproj /p:Configuration=Release /p:Platform=x64 /v:minimal
 
-    # 9. Compilar os executáveis (CLI e GUI)
     - name: 6. Compilar executáveis (main e WhisperDesktop)
       run: |
         msbuild Examples\main\main.vcxproj /p:Configuration=Release /p:Platform=x64 /v:minimal
         msbuild Examples\WhisperDesktop\WhisperDesktop.vcxproj /p:Configuration=Release /p:Platform=x64 /v:minimal
 
-    # 10. Listar todos os binários gerados (para depuração)
     - name: 7. Listar arquivos gerados
       shell: pwsh
       run: |
@@ -97,7 +92,6 @@ jobs:
         Write-Host "=== EXEs ==="
         Get-ChildItem -Recurse -Filter *.exe | ForEach-Object { "$($_.FullName) - Tamanho: $($_.Length) bytes" }
 
-    # 11. Upload de todos os binários como artefato
     - name: 8. Disponibilizar binários para download
       if: success()
       uses: actions/upload-artifact@v4
@@ -109,7 +103,6 @@ jobs:
           **/Release/*.dll
           **/Release/*.exe
 
-    # 12. Em caso de falha, enviar logs de erro
     - name: Enviar log de erros (se falhar)
       if: failure()
       uses: actions/upload-artifact@v4
