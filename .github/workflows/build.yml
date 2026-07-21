@@ -13,8 +13,8 @@ jobs:
     - name: Baixar código-fonte com submódulos
       uses: actions/checkout@v4
       with:
-        submodules: true          # 🔥 ESSENCIAL: baixa o whisper.cpp e ggml
-        fetch-depth: 0            # Para garantir que pegue tudo
+        submodules: true
+        fetch-depth: 0
 
     - name: Configurar MSBuild
       uses: microsoft/setup-msbuild@v2
@@ -32,34 +32,22 @@ jobs:
       shell: cmd
       run: msbuild ComputeShaders\ComputeShaders.vcxproj /p:Configuration=Release /p:Platform=x64
 
-    - name: 2. Compactar Shaders (gera o recurso necessário)
+    - name: 2. Compactar Shaders (gerar recurso)
       shell: cmd
       run: dotnet run --project Tools\CompressShaders\CompressShaders.csproj --configuration Release
 
-    - name: 3. Compilar a biblioteca GGML (suporte a quantização)
+    - name: 3. Compilar toda a solução (resolve dependências)
       shell: cmd
-      run: msbuild GGML\GGML.vcxproj /p:Configuration=Release /p:Platform=x64
+      run: msbuild Whisper.sln /p:Configuration=Release /p:Platform=x64 /v:minimal /m
 
-    - name: 4. Compilar a Whisper.dll (com suporte a GGML)
-      shell: cmd
-      run: msbuild Whisper\Whisper.vcxproj /p:Configuration=Release /p:Platform=x64
-
-    - name: 5. Compilar os executáveis (CLI e GUI)
+    - name: 4. Listar arquivos gerados (para depuração)
       shell: cmd
       run: |
-        msbuild Examples\main\main.vcxproj /p:Configuration=Release /p:Platform=x64
-        msbuild Examples\WhisperDesktop\WhisperDesktop.vcxproj /p:Configuration=Release /p:Platform=x64
-
-    - name: 6. Listar arquivos gerados (para depuração)
-      shell: cmd
-      run: |
-        echo "=== Conteúdo do Whisper ==="
+        echo "=== DLLs ==="
         dir /s Whisper\x64\Release\*.dll
-        echo "=== Conteúdo do WhisperDesktop ==="
-        dir /s Examples\WhisperDesktop\x64\Release\*.exe
-        dir /s Examples\WhisperDesktop\x64\Release\*.dll
-        echo "=== Conteúdo do main ==="
+        echo "=== Executáveis ==="
         dir /s Examples\main\x64\Release\*.exe
+        dir /s Examples\WhisperDesktop\x64\Release\*.exe
 
     - name: Disponibilizar binários para download
       if: success()
