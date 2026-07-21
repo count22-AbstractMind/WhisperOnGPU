@@ -3,7 +3,7 @@ name: Compilar Whisper Customizado
 on:
   push:
     branches: [ master, main ]
-  workflow_dispatch: # Permite rodar a Action manualmente pelo painel do GitHub
+  workflow_dispatch:
 
 jobs:
   build:
@@ -20,10 +20,10 @@ jobs:
       uses: nuget/setup-nuget@v2
 
     - name: Restaurar pacotes NuGet
-      run: nuget restore WhisperCpp.sln
+      run: nuget restore Whisper.sln   # <--- ALTERADO AQUI
 
     - name: Restaurar projetos .NET
-      run: dotnet restore WhisperCpp.sln
+      run: dotnet restore Whisper.sln   # <--- ALTERADO AQUI
 
     - name: 1. Compilar os Shaders da Placa de Video
       shell: cmd
@@ -35,8 +35,7 @@ jobs:
 
     - name: 3. Compilar Solucao Whisper Completa
       shell: cmd
-      # O parâmetro /m faz compilar usando múltiplos núcleos, sendo bem mais rápido
-      run: msbuild WhisperCpp.sln /p:Configuration=Release /p:Platform=x64 /v:minimal /m /fl /flp:logfile=errors.log;errorsonly
+      run: msbuild Whisper.sln /p:Configuration=Release /p:Platform=x64 /v:minimal /m /fl /flp:logfile=errors.log;errorsonly   # <--- ALTERADO AQUI
 
     - name: Disponibilizar executaveis para Download
       if: success()
@@ -47,7 +46,7 @@ jobs:
           **/x64/Release/main.exe
           **/x64/Release/WhisperDesktop.exe
           **/x64/Release/*.dll
-        
+
     - name: Enviar log se falhar
       if: failure()
       uses: actions/upload-artifact@v4
