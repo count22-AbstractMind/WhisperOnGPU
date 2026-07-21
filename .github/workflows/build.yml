@@ -1,71 +1,58 @@
-name: Compilar WhisperDesktopNG com Suporte a Quantização
+name: Compilar WhisperDesktopNG (com GGML)
 
-on:
-  push:
-    branches: [ master, main ]
-  workflow_dispatch:
+on: [push, workflow_dispatch]
 
 jobs:
   build:
     runs-on: windows-2022
-
     steps:
-    - name: Baixar código-fonte com submódulos
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
       with:
         submodules: true
         fetch-depth: 0
 
-    - name: Configurar MSBuild
-      uses: microsoft/setup-msbuild@v2
+    - uses: microsoft/setup-msbuild@v2
+    - uses: nuget/setup-nuget@v2
 
-    - name: Configurar NuGet
-      uses: nuget/setup-nuget@v2
+    - name: Restaurar pacotes
+      run: |
+        nuget restore Whisper.sln
+        dotnet restore Whisper.sln
 
-    - name: Restaurar pacotes NuGet
-      run: nuget restore Whisper.sln
-
-    - name: Restaurar projetos .NET
-      run: dotnet restore Whisper.sln
-
-    - name: 1. Compilar os Shaders da GPU
-      shell: cmd
+    - name: Compilar shaders
       run: msbuild ComputeShaders\ComputeShaders.vcxproj /p:Configuration=Release /p:Platform=x64
 
-    - name: 2. Compactar Shaders (gerar recurso)
-      shell: cmd
+    - name: Compactar shaders
       run: dotnet run --project Tools\CompressShaders\CompressShaders.csproj --configuration Release
 
-    - name: 3. Compilar a Whisper.dll (com GGML)
-      shell: cmd
-      run: msbuild Whisper\Whisper.vcxproj /p:Configuration=Release /p:Platform=x64
+    - name: Compilar GGML (primeiro)
+      run: msbuild GGML\GGML.vcxproj /p:Configuration=Release /p:Platform=x64 /v:minimal
 
-    - name: 4. Compilar os executáveis (CLI e GUI)
-      shell: cmd
-      run: msbuild Whisper.sln /p:Configuration=Release /p:Platform=x64 /v:minimal /m
+    - name: Verificar ggml.lib
+      run: dir GGML\x64\Release\ggml.lib
 
-    - name: 5. Listar arquivos gerados
-      shell: cmd
+    - name: Compilar Whisper (DLL)
+      run: msbuild Whisper\Whisper.vcxproj /p:Configuration=Release /p:Platform=x64 /v:minimal
+
+    - name: Compilar executáveis
       run: |
-        echo "=== Lista completa de DLLs e EXEs ==="
-        dir /s *.dll
-        dir /s *.exe
-        echo "=== Conteúdo da pasta x64\\Release ==="
-        dir x64\Release\
+        msbuild Examples\main\main.vcxproj /p:Configuration=Release /p:Platform=x64
+        msbuild Examples\WhisperDesktop\WhisperDesktop.vcxproj /p:Configuration=Release /p:Platform=x64
 
-    - name: Disponibilizar binários para download
-      if: success()
+    - name: Listar DLLs geradas
+      run: |
+        echo "=== Whisper.dll ==="
+        dir Whisper\x64\Release\Whisper.dll
+        echo "=== Outras DLLs ==="
+        dir Examples\WhisperDesktop\x64\Release\*.dll
+        dir x64\Release\*.dll
+
+    - name: Upload dos binários
       uses: actions/upload-artifact@v4
       with:
-        name: WhisperDesktopNG-Binaries
+        name: Whisper-GGML-Binaries
         path: |
+          Whisper\x64\Release\Whisper.dll
+          Examples\main\x64\Release\main.exe
+          Examples\WhisperDesktop\x64\Release\WhisperDesktop.exe
           **/x64/Release/*.dll
-          **/x64/Release/*.exe
-
-    - name: Enviar log se falhar
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: log-de-erros
-        path: errors.log
-        if-no-files-found: ignore
