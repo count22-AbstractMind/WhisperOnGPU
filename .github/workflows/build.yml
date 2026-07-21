@@ -46,7 +46,6 @@ jobs:
         $ns.AddNamespace("msb", "http://schemas.microsoft.com/developer/msbuild/2003")
 
         foreach ($cfg in $xml.Project.ItemDefinitionGroup) {
-          # Pré-processador
           $cl = $cfg.ClCompile
           if ($cl) {
             $defs = $cl.PreprocessorDefinitions
@@ -54,12 +53,9 @@ jobs:
               $text = $defs.InnerText
               if ($text -and (-not $text.Contains("WHISPER_USE_GGML"))) {
                 $defs.InnerText = "WHISPER_USE_GGML;" + $text
-                Write-Host "Adicionado WHISPER_USE_GGML"
               }
             }
           }
-
-          # Linker
           $link = $cfg.Link
           if ($link) {
             $deps = $link.AdditionalDependencies
@@ -67,23 +63,40 @@ jobs:
               $text = $deps.InnerText
               if ($text -and (-not $text.Contains("ggml.lib"))) {
                 $deps.InnerText = "ggml.lib;" + $text
-                Write-Host "Adicionado ggml.lib ao linker"
               }
             }
           }
         }
         $xml.Save($proj)
-        Write-Host "Whisper.vcxproj atualizado com sucesso."
 
     - name: 5. Compilar Whisper (DLL com GGML)
       run: msbuild Whisper\Whisper.vcxproj /p:Configuration=Release /p:Platform=x64 /v:minimal
 
-    - name: 6. Compilar executáveis (main e WhisperDesktop)
+    # === CORREÇÃO: Copiar whisperWindows.h para o WhisperDesktop ===
+    - name: 6. Copiar whisperWindows.h para o projeto WhisperDesktop
+      shell: pwsh
+      run: |
+        # Procura o arquivo gerado pelo Whisper
+        $source = @(
+          "Whisper\whisperWindows.h",
+          "Whisper\x64\Release\whisperWindows.h",
+          "Whisper\Release\whisperWindows.h"
+        ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+        if ($source) {
+          Copy-Item $source Examples\WhisperDesktop\
+          Write-Host "Copiado $source para Examples\WhisperDesktop\"
+        } else {
+          Write-Host "::warning::whisperWindows.h não encontrado. Verifique a compilação do Whisper."
+        }
+
+    - name: 7. Compilar executáveis (main e WhisperDesktop)
       run: |
         msbuild Examples\main\main.vcxproj /p:Configuration=Release /p:Platform=x64 /v:minimal
-        msbuild Examples\WhisperDesktop\WhisperDesktop.vcxproj /p:Configuration=Release /p:Platform=x64 /v:minimal
+        # Compila o WhisperDesktop com inclusão extra do diretório que contém o cabeçalho
+        msbuild Examples\WhisperDesktop\WhisperDesktop.vcxproj /p:Configuration=Release /p:Platform=x64 /p:AdditionalIncludeDirectories="$(ProjectDir)..\..\Whisper\;$(ProjectDir)..\..\Whisper\x64\Release\;%(AdditionalIncludeDirectories)" /v:minimal
 
-    - name: 7. Listar arquivos gerados
+    - name: 8. Listar arquivos gerados
       shell: pwsh
       run: |
         Write-Host "=== DLLs ==="
@@ -92,7 +105,7 @@ jobs:
         Write-Host "=== EXEs ==="
         Get-ChildItem -Recurse -Filter *.exe | ForEach-Object { "$($_.FullName) - Tamanho: $($_.Length) bytes" }
 
-    - name: 8. Disponibilizar binários para download
+    - name: 9. Disponibilizar binários para download
       if: success()
       uses: actions/upload-artifact@v4
       with:
