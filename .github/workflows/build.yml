@@ -26,32 +26,39 @@ jobs:
     - name: Compactar shaders
       run: dotnet run --project Tools\CompressShaders\CompressShaders.csproj --configuration Release
 
-    # Compilação principal: MSBuild resolve dependências se houver referências
+    # Compilação principal com MSBuild (resolve dependências)
     - name: Compilar solução completa
       run: msbuild Whisper.sln /p:Configuration=Release /p:Platform=x64 /v:minimal /m
 
-    # Fallback: se ainda houver erro, copia o cabeçalho e recompila o WhisperDesktop
-    - name: (Fallback) Copiar whisperWindows.h e recompilar WhisperDesktop
-      if: failure()  # só executa se a etapa anterior falhou
+    # Fallback: se o WhisperDesktop ainda falhar, copiar whisperWindows.h e recompilar
+    - name: Fallback para WhisperDesktop (se necessário)
+      if: failure()
       run: |
-        if exist Whisper\whisperWindows.h copy Whisper\whisperWindows.h Examples\WhisperDesktop\
-        if exist Whisper\x64\Release\whisperWindows.h copy Whisper\x64\Release\whisperWindows.h Examples\WhisperDesktop\
-        msbuild Examples\WhisperDesktop\WhisperDesktop.vcxproj /p:Configuration=Release /p:Platform=x64 /p:AdditionalIncludeDirectories="$(ProjectDir)..\..\Whisper\;$(ProjectDir)..\..\Whisper\x64\Release\;%24(AdditionalIncludeDirectories)"
+        # Localiza whisperWindows.h (gerado pelo Whisper)
+        $wh = Get-ChildItem -Recurse -Filter whisperWindows.h | Select-Object -First 1
+        if ($wh) {
+          Copy-Item $wh.FullName Examples\WhisperDesktop\
+          msbuild Examples\WhisperDesktop\WhisperDesktop.vcxproj /p:Configuration=Release /p:Platform=x64 /p:AdditionalIncludeDirectories="$($wh.DirectoryName);%(AdditionalIncludeDirectories)"
+        } else {
+          Write-Host "whisperWindows.h não encontrado; verifique a compilação do Whisper"
+        }
 
+    # Listagem de todos os binários (PowerShell)
     - name: Listar arquivos gerados
+      shell: pwsh
       run: |
-        echo "=== DLLs ==="
-        dir /s Whisper\x64\Release\Whisper.dll
-        echo "=== Executáveis ==="
-        dir /s Examples\main\x64\Release\main.exe
-        dir /s Examples\WhisperDesktop\x64\Release\WhisperDesktop.exe
+        Write-Host "=== DLLs ==="
+        Get-ChildItem -Recurse -Filter *.dll | ForEach-Object { $_.FullName }
+        Write-Host "=== EXEs ==="
+        Get-ChildItem -Recurse -Filter *.exe | ForEach-Object { $_.FullName }
 
+    # Upload de todos os .dll e .exe encontrados
     - name: Upload dos binários
       uses: actions/upload-artifact@v4
       with:
         name: WhisperDesktopNG-Binaries
         path: |
-          Whisper\x64\Release\Whisper.dll
-          Examples\main\x64\Release\main.exe
-          Examples\WhisperDesktop\x64\Release\WhisperDesktop.exe
+          **/Release/*.dll
+          **/Release/*.exe
           **/x64/Release/*.dll
+          **/x64/Release/*.exe
