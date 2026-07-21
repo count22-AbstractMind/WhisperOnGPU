@@ -77,33 +77,21 @@ jobs:
       run: |
         $source = @(
           "Whisper\whisperWindows.h",
-          "Whisper\x64\Release\whisperWindows.h",
-          "Whisper\Release\whisperWindows.h"
+          "Whisper\x64\Release\whisperWindows.h"
         ) | Where-Object { Test-Path $_ } | Select-Object -First 1
 
         if ($source) {
-          Copy-Item $source Examples\WhisperDesktop\
+          Copy-Item $source Examples\WhisperDesktop\ -Force
           Write-Host "Copiado $source para Examples\WhisperDesktop\"
         } else {
-          Write-Host "::warning::whisperWindows.h não encontrado. Verifique a compilação do Whisper."
+          Write-Host "::error::whisperWindows.h não encontrado após compilar o Whisper."
+          exit 1
         }
 
     - name: 7. Compilar executáveis (main e WhisperDesktop)
-      shell: pwsh
       run: |
-        # Compila o main (CLI)
         msbuild Examples\main\main.vcxproj /p:Configuration=Release /p:Platform=x64 /v:minimal
-
-        # Obtém o caminho absoluto do workspace
-        $workspace = $env:GITHUB_WORKSPACE
-        $includePaths = "$workspace\Whisper\;$workspace\Whisper\x64\Release\;"
-
-        # Compila o WhisperDesktop com os diretórios de inclusão adicionais
-        msbuild Examples\WhisperDesktop\WhisperDesktop.vcxproj `
-          /p:Configuration=Release `
-          /p:Platform=x64 `
-          /p:AdditionalIncludeDirectories="$includePaths%(AdditionalIncludeDirectories)" `
-          /v:minimal
+        msbuild Examples\WhisperDesktop\WhisperDesktop.vcxproj /p:Configuration=Release /p:Platform=x64 /v:minimal
 
     - name: 8. Listar arquivos gerados
       shell: pwsh
