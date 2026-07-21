@@ -75,17 +75,21 @@ jobs:
     - name: 6. Copiar whisperWindows.h para o projeto WhisperDesktop
       shell: pwsh
       run: |
-        $source = @(
-          "Whisper\whisperWindows.h",
-          "Whisper\x64\Release\whisperWindows.h"
-        ) | Where-Object { Test-Path $_ } | Select-Object -First 1
-
-        if ($source) {
+        # O arquivo está em API\whisperWindows.h (conforme o .vcxproj)
+        $source = "API\whisperWindows.h"
+        if (Test-Path $source) {
           Copy-Item $source Examples\WhisperDesktop\ -Force
           Write-Host "Copiado $source para Examples\WhisperDesktop\"
         } else {
-          Write-Host "::error::whisperWindows.h não encontrado após compilar o Whisper."
-          exit 1
+          # Fallback: busca recursiva
+          $found = Get-ChildItem -Recurse -Filter whisperWindows.h | Select-Object -First 1
+          if ($found) {
+            Copy-Item $found.FullName Examples\WhisperDesktop\ -Force
+            Write-Host "Copiado $($found.FullName) para Examples\WhisperDesktop\"
+          } else {
+            Write-Host "::error::whisperWindows.h não encontrado em lugar nenhum."
+            exit 1
+          }
         }
 
     - name: 7. Compilar executáveis (main e WhisperDesktop)
