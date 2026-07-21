@@ -10,11 +10,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ComputeShaders", "ComputeSh
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GGML", "GGML\GGML.vcxproj", "{B12702AD-ABFB-343A-A199-8E24837244A3}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WhisperNet", "WhisperNet\WhisperNet.csproj", "{F213558F-FEA2-4F66-A07F-69727E9EC81D}"
-	ProjectSection(ProjectDependencies) = postProject
-		{701DF8C8-E4A5-43EC-9C6B-747BBF4D8E71} = {701DF8C8-E4A5-43EC-9C6B-747BBF4D8E71}
-	EndProjectSection
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CompressShaders", "Tools\CompressShaders\CompressShaders.csproj", "{4E85005E-D2C7-4B28-A5F2-8BC92DAF6BA2}"
 	ProjectSection(ProjectDependencies) = postProject
 		{1C39D386-96D0-47A1-BBFA-68BBDB24439C} = {1C39D386-96D0-47A1-BBFA-68BBDB24439C}
@@ -27,11 +22,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "main", "Examples\main\main.vcxproj", "{4CCA7042-EB15-4F7A-B77B-5CAFD2DF47B2}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WhisperDesktop", "Examples\WhisperDesktop\WhisperDesktop.vcxproj", "{CD9E49F0-75A3-4F91-AC71-336109EE39C6}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{17835CA3-D7F6-4BEF-9471-12C015764A2C}"
-	ProjectSection(SolutionItems) = preProject
-		Readme.md = Readme.md
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -55,10 +45,6 @@ Global
 		{B12702AD-ABFB-343A-A199-8E24837244A3}.Debug|x64.Build.0 = Debug|x64
 		{B12702AD-ABFB-343A-A199-8E24837244A3}.Release|x64.ActiveCfg = Release|x64
 		{B12702AD-ABFB-343A-A199-8E24837244A3}.Release|x64.Build.0 = Release|x64
-		{F213558F-FEA2-4F66-A07F-69727E9EC81D}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{F213558F-FEA2-4F66-A07F-69727E9EC81D}.Debug|x64.Build.0 = Debug|Any CPU
-		{F213558F-FEA2-4F66-A07F-69727E9EC81D}.Release|x64.ActiveCfg = Release|Any CPU
-		{F213558F-FEA2-4F66-A07F-69727E9EC81D}.Release|x64.Build.0 = Release|Any CPU
 		{4E85005E-D2C7-4B28-A5F2-8BC92DAF6BA2}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{4E85005E-D2C7-4B28-A5F2-8BC92DAF6BA2}.Debug|x64.Build.0 = Debug|Any CPU
 		{4E85005E-D2C7-4B28-A5F2-8BC92DAF6BA2}.Release|x64.ActiveCfg = Release|Any CPU
