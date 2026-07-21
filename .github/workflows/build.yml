@@ -1,4 +1,4 @@
-name: Compilar WhisperDesktopNG (com GGML)
+name: Compilar WhisperDesktopNG (GGML)
 
 on: [push, workflow_dispatch]
 
@@ -20,32 +20,31 @@ jobs:
         nuget restore Whisper.sln
         dotnet restore Whisper.sln
 
-    - name: 1. Compilar shaders
+    - name: Compilar shaders
       run: msbuild ComputeShaders\ComputeShaders.vcxproj /p:Configuration=Release /p:Platform=x64
 
-    - name: 2. Compactar shaders
+    - name: Compactar shaders
       run: dotnet run --project Tools\CompressShaders\CompressShaders.csproj --configuration Release
 
-    - name: 3. Compilar GGML
-      run: msbuild GGML\GGML.vcxproj /p:Configuration=Release /p:Platform=x64
+    # Compilação principal: MSBuild resolve dependências se houver referências
+    - name: Compilar solução completa
+      run: msbuild Whisper.sln /p:Configuration=Release /p:Platform=x64 /v:minimal /m
 
-    - name: 4. Compilar Whisper (DLL)
-      run: msbuild Whisper\Whisper.vcxproj /p:Configuration=Release /p:Platform=x64
-
-    - name: 5. Compilar executáveis (main e WhisperDesktop)
+    # Fallback: se ainda houver erro, copia o cabeçalho e recompila o WhisperDesktop
+    - name: (Fallback) Copiar whisperWindows.h e recompilar WhisperDesktop
+      if: failure()  # só executa se a etapa anterior falhou
       run: |
-        msbuild Examples\main\main.vcxproj /p:Configuration=Release /p:Platform=x64
-        msbuild Examples\WhisperDesktop\WhisperDesktop.vcxproj /p:Configuration=Release /p:Platform=x64
+        if exist Whisper\whisperWindows.h copy Whisper\whisperWindows.h Examples\WhisperDesktop\
+        if exist Whisper\x64\Release\whisperWindows.h copy Whisper\x64\Release\whisperWindows.h Examples\WhisperDesktop\
+        msbuild Examples\WhisperDesktop\WhisperDesktop.vcxproj /p:Configuration=Release /p:Platform=x64 /p:AdditionalIncludeDirectories="$(ProjectDir)..\..\Whisper\;$(ProjectDir)..\..\Whisper\x64\Release\;%24(AdditionalIncludeDirectories)"
 
-    - name: 6. Listar arquivos gerados
+    - name: Listar arquivos gerados
       run: |
         echo "=== DLLs ==="
         dir /s Whisper\x64\Release\Whisper.dll
         echo "=== Executáveis ==="
         dir /s Examples\main\x64\Release\main.exe
         dir /s Examples\WhisperDesktop\x64\Release\WhisperDesktop.exe
-        echo "=== Outras DLLs (dependências) ==="
-        dir /s Examples\WhisperDesktop\x64\Release\*.dll
 
     - name: Upload dos binários
       uses: actions/upload-artifact@v4
