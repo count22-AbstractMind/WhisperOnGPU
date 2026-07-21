@@ -72,32 +72,51 @@ jobs:
     - name: 5. Compilar Whisper (DLL com GGML)
       run: msbuild Whisper\Whisper.vcxproj /p:Configuration=Release /p:Platform=x64 /v:minimal
 
-    - name: 6. Copiar whisperWindows.h para o projeto WhisperDesktop
+    - name: 6. Configurar WhisperDesktop.vcxproj para incluir diretórios do Whisper
       shell: pwsh
       run: |
-        # O arquivo está em API\whisperWindows.h (conforme o .vcxproj)
+        $proj = "Examples\WhisperDesktop\WhisperDesktop.vcxproj"
+        $xml = [xml](Get-Content $proj)
+        $ns = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
+        $ns.AddNamespace("msb", "http://schemas.microsoft.com/developer/msbuild/2003")
+
+        # Caminhos de inclusão relativos (resolvidos pelo MSBuild)
+        $includePaths = "$(SolutionDir)Whisper\;$(SolutionDir)API\;$(SolutionDir)Whisper\x64\Release\;"
+
+        foreach ($cfg in $xml.Project.ItemDefinitionGroup) {
+          $cl = $cfg.ClCompile
+          if ($cl) {
+            # Se já existir AdditionalIncludeDirectories, adiciona os novos; senão, cria
+            $inc = $cl.AdditionalIncludeDirectories
+            if ($inc) {
+              $text = $inc.InnerText
+              if (-not $text.Contains("Whisper\")) {
+                $inc.InnerText = $includePaths + $text
+              }
+            } else {
+              $newInc = $xml.CreateElement("AdditionalIncludeDirectories", $xml.Project.NamespaceURI)
+              $newInc.InnerText = $includePaths
+              $cl.AppendChild($newInc)
+            }
+          }
+        }
+        $xml.Save($proj)
+        Write-Host "WhisperDesktop.vcxproj atualizado com includes."
+
+    - name: 7. Copiar whisperWindows.h (caso ainda seja necessário)
+      shell: pwsh
+      run: |
         $source = "API\whisperWindows.h"
         if (Test-Path $source) {
           Copy-Item $source Examples\WhisperDesktop\ -Force
-          Write-Host "Copiado $source para Examples\WhisperDesktop\"
-        } else {
-          # Fallback: busca recursiva
-          $found = Get-ChildItem -Recurse -Filter whisperWindows.h | Select-Object -First 1
-          if ($found) {
-            Copy-Item $found.FullName Examples\WhisperDesktop\ -Force
-            Write-Host "Copiado $($found.FullName) para Examples\WhisperDesktop\"
-          } else {
-            Write-Host "::error::whisperWindows.h não encontrado em lugar nenhum."
-            exit 1
-          }
         }
 
-    - name: 7. Compilar executáveis (main e WhisperDesktop)
+    - name: 8. Compilar executáveis (main e WhisperDesktop)
       run: |
         msbuild Examples\main\main.vcxproj /p:Configuration=Release /p:Platform=x64 /v:minimal
         msbuild Examples\WhisperDesktop\WhisperDesktop.vcxproj /p:Configuration=Release /p:Platform=x64 /v:minimal
 
-    - name: 8. Listar arquivos gerados
+    - name: 9. Listar arquivos gerados
       shell: pwsh
       run: |
         Write-Host "=== DLLs ==="
@@ -106,7 +125,7 @@ jobs:
         Write-Host "=== EXEs ==="
         Get-ChildItem -Recurse -Filter *.exe | ForEach-Object { "$($_.FullName) - Tamanho: $($_.Length) bytes" }
 
-    - name: 9. Disponibilizar binários para download
+    - name: 10. Disponibilizar binários para download
       if: success()
       uses: actions/upload-artifact@v4
       with:
