@@ -36,18 +36,22 @@ jobs:
       shell: cmd
       run: dotnet run --project Tools\CompressShaders\CompressShaders.csproj --configuration Release
 
-    - name: 3. Compilar toda a solução (resolve dependências)
+    - name: 3. Compilar a Whisper.dll (com GGML)
+      shell: cmd
+      run: msbuild Whisper\Whisper.vcxproj /p:Configuration=Release /p:Platform=x64
+
+    - name: 4. Compilar os executáveis (CLI e GUI)
       shell: cmd
       run: msbuild Whisper.sln /p:Configuration=Release /p:Platform=x64 /v:minimal /m
 
-    - name: 4. Listar arquivos gerados (para depuração)
+    - name: 5. Listar arquivos gerados
       shell: cmd
       run: |
-        echo "=== DLLs ==="
-        dir /s Whisper\x64\Release\*.dll
-        echo "=== Executáveis ==="
-        dir /s Examples\main\x64\Release\*.exe
-        dir /s Examples\WhisperDesktop\x64\Release\*.exe
+        echo "=== Lista completa de DLLs e EXEs ==="
+        dir /s *.dll
+        dir /s *.exe
+        echo "=== Conteúdo da pasta x64\\Release ==="
+        dir x64\Release\
 
     - name: Disponibilizar binários para download
       if: success()
@@ -55,11 +59,8 @@ jobs:
       with:
         name: WhisperDesktopNG-Binaries
         path: |
-          Whisper\x64\Release\Whisper.dll
-          Examples\main\x64\Release\main.exe
-          Examples\WhisperDesktop\x64\Release\WhisperDesktop.exe
-          Examples\WhisperDesktop\x64\Release\*.dll
           **/x64/Release/*.dll
+          **/x64/Release/*.exe
 
     - name: Enviar log se falhar
       if: failure()
